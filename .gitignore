@@ -178,3 +178,5 @@ claude-flow
 hive-mind-prompt-*.txt
 CLAUDE.md
 .gsd
+pgdata2/
+__pycache__/
