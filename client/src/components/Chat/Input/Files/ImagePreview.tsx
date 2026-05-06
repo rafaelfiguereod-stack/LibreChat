@@ -14,6 +14,36 @@ type styleProps = {
   backgroundRepeat?: string;
 };
 
+const sanitizeImageUrl = (value?: string): string => {
+  if (!value) {
+    return '';
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  if (trimmed.startsWith('blob:') || trimmed.startsWith('/')) {
+    return trimmed;
+  }
+
+  if (/^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=]+$/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return trimmed;
+    }
+  } catch {
+    return '';
+  }
+
+  return '';
+};
+
 const ImagePreview = ({
   imageBase64,
   url,
@@ -88,7 +118,7 @@ const ImagePreview = ({
     backgroundRepeat: 'no-repeat',
   };
 
-  const imageUrl = imageBase64 ?? url ?? '';
+  const imageUrl = sanitizeImageUrl(imageBase64 ?? url ?? '');
 
   const style: styleProps = imageUrl
     ? {
