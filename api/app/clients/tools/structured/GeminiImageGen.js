@@ -25,10 +25,20 @@ if (process.env.PROXY) {
   const proxyAgent = new ProxyAgent(process.env.PROXY);
 
   globalThis.fetch = function (url, options = {}) {
-    const urlString = url.toString();
-    if (urlString.includes('googleapis.com')) {
-      options = { ...options, dispatcher: proxyAgent };
+    try {
+      const parsedUrl =
+        url instanceof URL
+          ? url
+          : new URL(typeof url === 'string' ? url : url?.url ?? url?.toString?.());
+      const hostname = parsedUrl.hostname.toLowerCase();
+
+      if (hostname === 'googleapis.com' || hostname.endsWith('.googleapis.com')) {
+        options = { ...options, dispatcher: proxyAgent };
+      }
+    } catch (_) {
+      // If URL parsing fails, leave options unchanged.
     }
+
     return originalFetch.call(this, url, options);
   };
 }
