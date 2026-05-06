@@ -1,5 +1,9 @@
 name: Docker Images Build on Tag
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   push:
     tags:
