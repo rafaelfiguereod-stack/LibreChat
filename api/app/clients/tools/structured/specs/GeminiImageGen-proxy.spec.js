@@ -34,8 +34,18 @@ describe('GeminiImageGen Proxy Configuration', () => {
       const proxyAgent = new ProxyAgent(process.env.PROXY);
 
       globalThis.fetch = function (url, options = {}) {
-        const urlString = url.toString();
-        if (urlString.includes('googleapis.com')) {
+        let shouldUseProxy = false;
+
+        try {
+          const parsedUrl = new URL(url.toString());
+          const hostname = parsedUrl.hostname.toLowerCase();
+          shouldUseProxy =
+            hostname === 'googleapis.com' || hostname.endsWith('.googleapis.com');
+        } catch (e) {
+          shouldUseProxy = false;
+        }
+
+        if (shouldUseProxy) {
           options = { ...options, dispatcher: proxyAgent };
         }
         return _originalFetch.call(this, url, options);
