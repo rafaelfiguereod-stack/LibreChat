@@ -3,6 +3,9 @@ name: Deploy_GHRunner_Linux_ACI
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   RUNNER_VERSION: 2.293.0
   ACI_RESOURCE_GROUP: 'Demo-ACI-GitHub-Runners-RG'
