@@ -137,7 +137,7 @@ export default function useArtifacts() {
     }
 
     const hasEnclosedArtifact =
-      /:::artifact(?:\{[^}]*\})?(?:\s|\n)*(?:```[\s\S]*?```(?:\s|\n)*)?:::/m.test(
+      /:::artifact(?:\{[^}]*\})?\s*(?:```[\s\S]*?```\s*)?:::/m.test(
         latestMessageText.trim(),
       );
 
