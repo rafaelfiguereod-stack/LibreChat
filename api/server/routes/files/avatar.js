@@ -1,4 +1,5 @@
 const fs = require('fs').promises;
+const path = require('path');
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { logger } = require('@librechat/data-schemas');
@@ -17,12 +18,27 @@ const avatarUploadLimiter = rateLimit({
 });
 
 router.post('/', avatarUploadLimiter, async (req, res) => {
+  let safeUploadPath;
   try {
     const appConfig = req.config;
     filterFile({ req, file: req.file, image: true, isAvatar: true });
     const userId = req.user.id;
     const { manual } = req.body;
-    const input = await fs.readFile(req.file.path);
+
+    if (!req.file || typeof req.file.path !== 'string') {
+      throw new Error('Uploaded file path is invalid');
+    }
+
+    const uploadRootDir = path.resolve(path.dirname(req.file.path));
+    safeUploadPath = path.resolve(req.file.path);
+    if (
+      safeUploadPath !== uploadRootDir &&
+      !safeUploadPath.startsWith(uploadRootDir + path.sep)
+    ) {
+      throw new Error('Invalid upload path');
+    }
+
+    const input = await fs.readFile(safeUploadPath);
 
     if (!userId) {
       throw new Error('User ID is undefined');
@@ -46,8 +62,10 @@ router.post('/', avatarUploadLimiter, async (req, res) => {
     res.status(500).json({ message });
   } finally {
     try {
-      await fs.unlink(req.file.path);
-      logger.debug('[/files/images/avatar] Temp. image upload file deleted');
+      if (safeUploadPath) {
+        await fs.unlink(safeUploadPath);
+        logger.debug('[/files/images/avatar] Temp. image upload file deleted');
+      }
     } catch {
       logger.debug('[/files/images/avatar] Temp. image upload file already deleted');
     }
