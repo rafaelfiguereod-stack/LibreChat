@@ -116,7 +116,8 @@
     "winston-daily-rotate-file": "^5.0.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "yauzl": "^3.2.1",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "csurf": "^1.11.0"
   },
   "devDependencies": {
     "@types/sanitize-html": "^2.13.0",
