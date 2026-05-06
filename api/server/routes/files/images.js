@@ -58,8 +58,16 @@ router.post('/', async (req, res) => {
     res.status(500).json({ message });
   } finally {
     try {
-      await fs.unlink(req.file.path);
-      logger.debug('[/files/images] Temp. image upload file deleted');
+      const uploadRoot = path.resolve(appConfig.paths.imageOutput, req.user.id);
+      const candidatePath = path.resolve(req.file.path);
+      const uploadRootWithSep = uploadRoot.endsWith(path.sep) ? uploadRoot : uploadRoot + path.sep;
+
+      if (candidatePath.startsWith(uploadRootWithSep)) {
+        await fs.unlink(candidatePath);
+        logger.debug('[/files/images] Temp. image upload file deleted');
+      } else {
+        logger.warn('[/files/images] Skipping temp file deletion due to invalid path');
+      }
     } catch {
       logger.debug('[/files/images] Temp. image upload file already deleted');
     }
