@@ -3,6 +3,9 @@ name: Linux_Container_Workflow
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   RUNNER_VERSION: 2.293.0
 
