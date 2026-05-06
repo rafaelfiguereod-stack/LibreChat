@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const { logger } = require('@librechat/data-schemas');
 const { CacheKeys } = require('librechat-data-provider');
 const {
@@ -20,6 +21,12 @@ const { getLogStores } = require('~/cache');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 const OAUTH_CSRF_COOKIE_PATH = '/api/actions';
+const oauthCallbackRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60, // limit each IP to 60 callback requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 /**
  * Sets a CSRF cookie binding the action OAuth flow to the current browser session.
@@ -52,7 +59,7 @@ router.post('/:action_id/oauth/bind', requireJwtAuth, setOAuthSession, async (re
  * @param {string} req.query.state - The state token to verify the authenticity of the request.
  * @returns {void} Sends a success message after updating the action with OAuth tokens.
  */
-router.get('/:action_id/oauth/callback', async (req, res) => {
+router.get('/:action_id/oauth/callback', oauthCallbackRateLimiter, async (req, res) => {
   const { action_id } = req.params;
   const { code, state } = req.query;
   const flowsCache = getLogStores(CacheKeys.FLOWS);
