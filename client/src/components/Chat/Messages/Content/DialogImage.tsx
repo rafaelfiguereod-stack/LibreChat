@@ -6,6 +6,15 @@ import { useLocalize } from '~/hooks';
 
 const imageSizeCache = new Map<string, string>();
 
+function sanitizeDialogImageSrc(imageSrc: string): string {
+  if (!imageSrc) return '';
+  if (imageSrc.startsWith('blob:')) return imageSrc;
+  if (imageSrc.startsWith('data:image/')) return imageSrc;
+  if (imageSrc.startsWith('http://') || imageSrc.startsWith('https://')) return imageSrc;
+  if (imageSrc.startsWith('/')) return imageSrc;
+  return '';
+}
+
 const getQualityStyles = (quality: string): string => {
   if (quality === 'high') {
     return 'bg-green-100 text-green-800';
@@ -363,7 +372,7 @@ export default function DialogImage({
               >
                 <img
                   ref={imageRef}
-                  src={src}
+                  src={sanitizeDialogImageSrc(src)}
                   alt="Image"
                   decoding="async"
                   className="block max-h-[85vh] object-contain"
