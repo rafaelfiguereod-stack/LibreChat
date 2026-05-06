@@ -206,7 +206,14 @@ router.post(
  * Google Admin Routes
  * ────────────────────────────────────────────── */
 
-router.get('/oauth/google', async (req, res, next) => {
+const googleAdminOAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.get('/oauth/google', googleAdminOAuthLimiter, async (req, res, next) => {
   const state = generateState();
   const cache = getLogStores(CacheKeys.ADMIN_OAUTH_EXCHANGE);
   const stored = await storeAndStripChallenge(cache, req, state, 'google');
