@@ -24,18 +24,27 @@ const sanitizeImageUrl = (value?: string): string => {
     return '';
   }
 
-  if (trimmed.startsWith('blob:') || trimmed.startsWith('/')) {
-    return trimmed;
+  // Reject control characters to avoid breaking URL/CSS contexts.
+  if (/[\u0000-\u001F\u007F]/.test(trimmed)) {
+    return '';
   }
 
   if (/^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=]+$/i.test(trimmed)) {
     return trimmed;
   }
 
+  if (trimmed.startsWith('/')) {
+    // Allow root-relative paths only.
+    return /\s/.test(trimmed) ? '' : trimmed;
+  }
+
   try {
     const parsed = new URL(trimmed);
+    if (parsed.protocol === 'blob:') {
+      return parsed.href;
+    }
     if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-      return trimmed;
+      return parsed.href;
     }
   } catch {
     return '';
