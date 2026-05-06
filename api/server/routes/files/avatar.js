@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { logger } = require('@librechat/data-schemas');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { resizeAvatar } = require('~/server/services/Files/images/avatar');
@@ -8,7 +9,14 @@ const { filterFile } = require('~/server/services/Files/process');
 
 const router = express.Router();
 
-router.post('/', async (req, res) => {
+const avatarUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/', avatarUploadLimiter, async (req, res) => {
   try {
     const appConfig = req.config;
     filterFile({ req, file: req.file, image: true, isAvatar: true });
