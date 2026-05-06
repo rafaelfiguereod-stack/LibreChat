@@ -29,6 +29,7 @@ const sanitizeImageUrl = (value?: string): string => {
     return '';
   }
 
+  // Allow only strict base64-encoded data image URLs.
   if (/^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=]+$/i.test(trimmed)) {
     return trimmed;
   }
@@ -40,10 +41,8 @@ const sanitizeImageUrl = (value?: string): string => {
 
   try {
     const parsed = new URL(trimmed);
+    // Restrict to blob previews for user-selected local files.
     if (parsed.protocol === 'blob:') {
-      return parsed.href;
-    }
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
       return parsed.href;
     }
   } catch {
@@ -132,7 +131,7 @@ const ImagePreview = ({
   const style: styleProps = imageUrl
     ? {
         ...baseStyle,
-        backgroundImage: `url(${imageUrl})`,
+        backgroundImage: `url("${encodeURI(imageUrl)}")`,
       }
     : baseStyle;
 
