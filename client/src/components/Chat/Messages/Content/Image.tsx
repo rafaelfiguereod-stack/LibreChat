@@ -12,14 +12,17 @@ const IMAGE_MAX_W_PX = 512;
 function sanitizeImagePath(imagePath: string): string {
   if (!imagePath) return '';
 
-  if (imagePath.startsWith('blob:')) return imagePath;
-
   if (imagePath.startsWith('/')) {
     return imagePath.startsWith('/images/') ? imagePath : '';
   }
 
   try {
     const parsed = new URL(imagePath, window.location.origin);
+
+    if (parsed.protocol === 'blob:') {
+      return parsed.origin === window.location.origin ? parsed.href : '';
+    }
+
     if (
       (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
       parsed.origin === window.location.origin &&
