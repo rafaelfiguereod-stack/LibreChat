@@ -18,6 +18,19 @@ function sanitizeImagePath(imagePath: string): string {
   return '';
 }
 
+function getSafeDownloadHref(url: string): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'blob:') {
+      return parsed.href;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /** Caches image dimensions by src so remounts can reserve space */
 const dimensionCache = new Map<string, { width: number; height: number }>();
 /** Tracks URLs that have been fully painted — skip skeleton on remount */
@@ -95,8 +108,13 @@ const Image = ({
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
+      const safeHref = getSafeDownloadHref(absoluteImageUrl);
+      if (!safeHref) {
+        console.warn('Blocked unsafe download URL');
+        return;
+      }
       const link = document.createElement('a');
-      link.href = absoluteImageUrl;
+      link.href = safeHref;
       link.download = altText || 'image.png';
       document.body.appendChild(link);
       link.click();
