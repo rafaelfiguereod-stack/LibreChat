@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import {
   actionSchema,
   agentSchema,
@@ -131,9 +131,9 @@ async function initializeOrgDb(conn: mongoose.Connection): Promise<{
 /** Execute a psql command against the FerretDB PostgreSQL backend via docker exec */
 function psql(query: string): string {
   try {
-    const escaped = query.replace(/"/g, '\\"');
-    return execSync(
-      `docker exec ${PG_CONTAINER} psql -U ${PG_USER} -d postgres -t -A -c "${escaped}"`,
+    return execFileSync(
+      'docker',
+      ['exec', PG_CONTAINER, 'psql', '-U', PG_USER, '-d', 'postgres', '-t', '-A', '-c', query],
       { encoding: 'utf-8', timeout: 30_000 },
     ).trim();
   } catch {
