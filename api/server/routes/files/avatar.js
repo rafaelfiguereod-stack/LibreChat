@@ -29,8 +29,10 @@ router.post('/', avatarUploadLimiter, async (req, res) => {
       throw new Error('Uploaded file path is invalid');
     }
 
-    const configuredUploadRoot =
-      appConfig?.paths?.upload?.temp || appConfig?.paths?.uploads || path.dirname(req.file.path);
+    const configuredUploadRoot = appConfig?.paths?.upload?.temp || appConfig?.paths?.uploads;
+    if (typeof configuredUploadRoot !== 'string' || configuredUploadRoot.length === 0) {
+      throw new Error('Upload root directory is not configured');
+    }
     const uploadRootDir = await fs.realpath(path.resolve(configuredUploadRoot));
     const uploadedFileName = path.basename(req.file.path);
     const uploadCandidatePath = path.resolve(uploadRootDir, uploadedFileName);
