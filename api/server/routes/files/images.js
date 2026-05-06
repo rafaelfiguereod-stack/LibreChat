@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs').promises;
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { logger } = require('@librechat/data-schemas');
 const { verifyAgentUploadPermission, resolveUploadErrorMessage } = require('@librechat/api');
 const { isAssistantsEndpoint } = require('librechat-data-provider');
@@ -14,7 +15,14 @@ const db = require('~/models');
 
 const router = express.Router();
 
-router.post('/', async (req, res) => {
+const imageUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/', imageUploadLimiter, async (req, res) => {
   const metadata = req.body;
   const appConfig = req.config;
 
