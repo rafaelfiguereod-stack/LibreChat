@@ -20,6 +20,7 @@
  * @see https://openresponses.org/specification
  */
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const {
   createResponse,
   getResponse,
@@ -35,7 +36,15 @@ const {
 
 const router = express.Router();
 
+const responsesRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each client IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.use(preAuthTenantMiddleware);
+router.use(responsesRateLimiter);
 router.use(requireRemoteAgentAuth);
 router.use(configMiddleware);
 router.use(checkRemoteAgentsFeature);
