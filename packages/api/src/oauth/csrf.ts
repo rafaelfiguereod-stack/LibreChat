@@ -1,6 +1,9 @@
 import crypto from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
 
+const COOKIE_ENC_ALGO = 'aes-256-gcm';
+const COOKIE_IV_LENGTH = 12;
+
 export const OAUTH_CSRF_COOKIE = 'oauth_csrf';
 export const OAUTH_CSRF_MAX_AGE = 10 * 60 * 1000;
 
@@ -49,9 +52,46 @@ export function generateOAuthCsrfToken(flowId: string, secret?: string): string 
   return crypto.createHmac('sha256', key).update(flowId).digest('hex').slice(0, 32);
 }
 
+function encryptCookieValue(plaintext: string, secret?: string): string {
+  const key = secret || process.env.JWT_SECRET;
+  if (!key) {
+    throw new Error('JWT_SECRET is required for OAuth cookie encryption');
+  }
+  const encKey = crypto.createHash('sha256').update(key).digest();
+  const iv = crypto.randomBytes(COOKIE_IV_LENGTH);
+  const cipher = crypto.createCipheriv(COOKIE_ENC_ALGO, encKey, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${iv.toString('hex')}.${tag.toString('hex')}.${encrypted.toString('hex')}`;
+}
+
+function decryptCookieValue(value: string, secret?: string): string | null {
+  const key = secret || process.env.JWT_SECRET;
+  if (!key) {
+    return null;
+  }
+  const parts = value.split('.');
+  if (parts.length !== 3) {
+    return null;
+  }
+  const [ivHex, tagHex, encryptedHex] = parts;
+  try {
+    const encKey = crypto.createHash('sha256').update(key).digest();
+    const iv = Buffer.from(ivHex, 'hex');
+    const tag = Buffer.from(tagHex, 'hex');
+    const encrypted = Buffer.from(encryptedHex, 'hex');
+    const decipher = crypto.createDecipheriv(COOKIE_ENC_ALGO, encKey, iv);
+    decipher.setAuthTag(tag);
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+    return decrypted.toString('utf8');
+  } catch {
+    return null;
+  }
+}
+
 /** Sets a SameSite=Lax CSRF cookie bound to a specific OAuth flow */
 export function setOAuthCsrfCookie(res: Response, flowId: string, cookiePath: string): void {
-  res.cookie(OAUTH_CSRF_COOKIE, generateOAuthCsrfToken(flowId), {
+  res.cookie(OAUTH_CSRF_COOKIE, encryptCookieValue(generateOAuthCsrfToken(flowId)), {
     httpOnly: true,
     secure: shouldUseSecureCookie(),
     sameSite: 'lax',
@@ -75,11 +115,15 @@ export function validateOAuthCsrf(
   if (!cookie) {
     return false;
   }
-  const expected = generateOAuthCsrfToken(flowId);
-  if (cookie.length !== expected.length) {
+  const token = decryptCookieValue(cookie);
+  if (!token) {
     return false;
   }
-  return crypto.timingSafeEqual(Buffer.from(cookie), Buffer.from(expected));
+  const expected = generateOAuthCsrfToken(flowId);
+  if (token.length !== expected.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
 }
 
 /**
@@ -96,7 +140,7 @@ export function setOAuthSession(req: Request, res: Response, next: NextFunction)
 
 /** Sets a SameSite=Lax session cookie that binds the browser to the authenticated userId */
 export function setOAuthSessionCookie(res: Response, userId: string): void {
-  res.cookie(OAUTH_SESSION_COOKIE, generateOAuthCsrfToken(userId), {
+  res.cookie(OAUTH_SESSION_COOKIE, encryptCookieValue(generateOAuthCsrfToken(userId)), {
     httpOnly: true,
     secure: shouldUseSecureCookie(),
     sameSite: 'lax',
@@ -111,9 +155,13 @@ export function validateOAuthSession(req: Request, userId: string): boolean {
   if (!cookie) {
     return false;
   }
-  const expected = generateOAuthCsrfToken(userId);
-  if (cookie.length !== expected.length) {
+  const token = decryptCookieValue(cookie);
+  if (!token) {
     return false;
   }
-  return crypto.timingSafeEqual(Buffer.from(cookie), Buffer.from(expected));
+  const expected = generateOAuthCsrfToken(userId);
+  if (token.length !== expected.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
 }
