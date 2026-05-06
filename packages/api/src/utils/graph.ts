@@ -9,10 +9,10 @@ import {
 
 /**
  * Pre-computed regex for matching the Graph token placeholder.
- * Escapes curly braces in the placeholder string for safe regex use.
+ * Escapes regex metacharacters in the placeholder string for safe regex use.
  */
 const GRAPH_TOKEN_REGEX = new RegExp(
-  GRAPH_TOKEN_PLACEHOLDER.replace(/[{}]/g, '\\$&'),
+  GRAPH_TOKEN_PLACEHOLDER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
   'g',
 );
 
