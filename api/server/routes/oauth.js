@@ -91,7 +91,7 @@ router.get(
 /**
  * OpenID Routes
  */
-router.get('/openid', (req, res, next) => {
+router.get('/openid', loginLimiter, (req, res, next) => {
   return passport.authenticate('openid', {
     session: false,
     state: randomState(),
