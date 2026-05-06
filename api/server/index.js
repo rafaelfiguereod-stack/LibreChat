@@ -8,6 +8,7 @@ const express = require('express');
 const passport = require('passport');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
+const csurf = require('csurf');
 const mongoSanitize = require('express-mongo-sanitize');
 const { logger, runAsSystem } = require('@librechat/data-schemas');
 const {
@@ -128,6 +129,13 @@ const startServer = async () => {
   app.use(mongoSanitize());
   app.use(cors());
   app.use(cookieParser());
+  app.use(csurf({ cookie: true }));
+  app.use((err, _req, res, next) => {
+    if (err && err.code === 'EBADCSRFTOKEN') {
+      return res.status(403).json({ message: 'Invalid CSRF token' });
+    }
+    return next(err);
+  });
 
   if (!isEnabled(DISABLE_COMPRESSION)) {
     app.use(compression());
