@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { logger, SystemCapabilities } = require('@librechat/data-schemas');
 const {
   refreshS3FileUrls,
@@ -378,6 +379,13 @@ router.get('/:file_id/preview', fileAccess, async (req, res) => {
 
 const UPLOAD_ROOT = path.resolve(process.env.UPLOAD_PATH || process.cwd());
 
+const filesUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 function getSafeUploadPath(filePath) {
   if (typeof filePath !== 'string' || filePath.length === 0) {
     throw new Error('Invalid file path');
@@ -459,7 +467,7 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', filesUploadLimiter, async (req, res) => {
   const metadata = req.body;
   let cleanup = true;
 
