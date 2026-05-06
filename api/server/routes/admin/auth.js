@@ -242,11 +242,18 @@ router.get(
   createOAuthHandler(`${getAdminPanelUrl()}/auth/google/callback`),
 );
 
+const adminOAuthRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 /* ──────────────────────────────────────────────
  * GitHub Admin Routes
  * ────────────────────────────────────────────── */
 
-router.get('/oauth/github', async (req, res, next) => {
+router.get('/oauth/github', adminOAuthRateLimiter, async (req, res, next) => {
   const state = generateState();
   const cache = getLogStores(CacheKeys.ADMIN_OAUTH_EXCHANGE);
   const stored = await storeAndStripChallenge(cache, req, state, 'github');
@@ -265,6 +272,7 @@ router.get('/oauth/github', async (req, res, next) => {
 
 router.get(
   '/oauth/github/callback',
+  adminOAuthRateLimiter,
   (req, res, next) => {
     req.oauthState = typeof req.query.state === 'string' ? req.query.state : undefined;
     next();
@@ -286,7 +294,7 @@ router.get(
  * Discord Admin Routes
  * ────────────────────────────────────────────── */
 
-router.get('/oauth/discord', async (req, res, next) => {
+router.get('/oauth/discord', adminOAuthRateLimiter, async (req, res, next) => {
   const state = generateState();
   const cache = getLogStores(CacheKeys.ADMIN_OAUTH_EXCHANGE);
   const stored = await storeAndStripChallenge(cache, req, state, 'discord');
@@ -305,6 +313,7 @@ router.get('/oauth/discord', async (req, res, next) => {
 
 router.get(
   '/oauth/discord/callback',
+  adminOAuthRateLimiter,
   (req, res, next) => {
     req.oauthState = typeof req.query.state === 'string' ? req.query.state : undefined;
     next();
@@ -321,13 +330,6 @@ router.get(
   middleware.checkDomainAllowed,
   createOAuthHandler(`${getAdminPanelUrl()}/auth/discord/callback`),
 );
-
-const adminOAuthRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 /* ──────────────────────────────────────────────
  * Facebook Admin Routes
