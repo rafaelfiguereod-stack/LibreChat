@@ -9,7 +9,7 @@ interface ContentBlock {
   text?: string;
 }
 
-const ERROR_PREFIX = /^Error:\s*(\[.*?\]\s*)*tool call failed:\s*/i;
+const ERROR_PREFIX = /^Error:\s*(\[[^\]]*\]\s*)*tool call failed:\s*/i;
 const ERROR_INNER = /^Error\s+\w+ing to endpoint\s*\(HTTP \d+\):\s*/i;
 
 function cleanError(text: string): string {
