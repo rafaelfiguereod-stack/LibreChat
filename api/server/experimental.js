@@ -7,6 +7,7 @@ const Redis = require('ioredis');
 const cors = require('cors');
 const axios = require('axios');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const passport = require('passport');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
@@ -325,7 +326,11 @@ if (cluster.isMaster) {
     app.use('/api/endpoints', routes.endpoints);
     app.use('/api/balance', routes.balance);
     app.use('/api/models', routes.models);
-    app.use('/api/config', preAuthTenantMiddleware, optionalJwtAuth, routes.config);
+    const configRateLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 100,
+    });
+    app.use('/api/config', preAuthTenantMiddleware, configRateLimiter, optionalJwtAuth, routes.config);
     app.use('/api/assistants', routes.assistants);
     app.use('/api/files', await routes.files.initialize());
     app.use('/images/', createValidateImageRequest(appConfig.secureImageLinks), routes.staticRoute);
