@@ -26,10 +26,20 @@ export const genAzureEndpoint = ({
   azureOpenAIApiDeploymentName: string;
 }): string => {
   // Support both old (.openai.azure.com) and new (.cognitiveservices.azure.com) endpoint formats
-  // If instanceName already includes a full domain, use it as-is
-  if (azureOpenAIApiInstanceName.includes('.azure.com')) {
-    return `https://${azureOpenAIApiInstanceName}/openai/deployments/${azureOpenAIApiDeploymentName}`;
+  // If instanceName already includes a full Azure domain host, use it as-is
+  try {
+    const parsed = new URL(`https://${azureOpenAIApiInstanceName}`);
+    const hostname = parsed.hostname.toLowerCase();
+    const isAzureHost = hostname === 'azure.com' || hostname.endsWith('.azure.com');
+    const hasOnlyHost = parsed.href === `${parsed.origin}/`;
+
+    if (isAzureHost && hasOnlyHost) {
+      return `https://${hostname}/openai/deployments/${azureOpenAIApiDeploymentName}`;
+    }
+  } catch {
+    // Ignore parse errors and fall back to legacy format.
   }
+
   // Legacy format for backward compatibility
   return `https://${azureOpenAIApiInstanceName}.openai.azure.com/openai/deployments/${azureOpenAIApiDeploymentName}`;
 };
