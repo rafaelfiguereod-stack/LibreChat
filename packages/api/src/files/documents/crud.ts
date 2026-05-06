@@ -153,7 +153,7 @@ async function odtToText(file: Express.Multer.File): Promise<string> {
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
     .replace(/&amp;/g, '&')
-    .replace(/<[^>]+>/g, '')
+    .replace(/[<>]/g, '')
     .replace(/[ \t]+/g, ' ')
     .replace(/\n[ \t]+/g, '\n')
     .replace(/[ \t]+\n/g, '\n')
