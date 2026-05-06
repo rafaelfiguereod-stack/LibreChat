@@ -11,10 +11,26 @@ const IMAGE_MAX_W_PX = 512;
 
 function sanitizeImagePath(imagePath: string): string {
   if (!imagePath) return '';
+
   if (imagePath.startsWith('blob:')) return imagePath;
-  if (imagePath.startsWith('data:image/')) return imagePath;
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath;
-  if (imagePath.startsWith('/')) return imagePath;
+
+  if (imagePath.startsWith('/')) {
+    return imagePath.startsWith('/images/') ? imagePath : '';
+  }
+
+  try {
+    const parsed = new URL(imagePath, window.location.origin);
+    if (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      parsed.origin === window.location.origin &&
+      parsed.pathname.startsWith('/images/')
+    ) {
+      return parsed.pathname + parsed.search + parsed.hash;
+    }
+  } catch {
+    return '';
+  }
+
   return '';
 }
 
@@ -74,13 +90,7 @@ const Image = ({
     const safeImagePath = sanitizeImagePath(imagePath);
     if (!safeImagePath) return '';
 
-    if (
-      safeImagePath.startsWith('blob:') ||
-      safeImagePath.startsWith('http://') ||
-      safeImagePath.startsWith('https://') ||
-      safeImagePath.startsWith('data:image/') ||
-      !safeImagePath.startsWith('/images/')
-    ) {
+    if (safeImagePath.startsWith('blob:')) {
       return safeImagePath;
     }
 
