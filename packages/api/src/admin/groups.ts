@@ -102,18 +102,22 @@ export function createAdminGroupsHandlers(deps: AdminGroupsDeps) {
 
   async function listGroupsHandler(req: ServerRequest, res: Response) {
     try {
-      const { search, source } = req.query as { search?: string; source?: string };
+      const rawSearch = req.query.search;
+      const rawSource = req.query.source;
       const filter: GroupListFilter = {};
-      if (source && VALID_GROUP_SOURCES.has(source)) {
-        filter.source = source as IGroup['source'];
+      if (typeof rawSource === 'string' && VALID_GROUP_SOURCES.has(rawSource)) {
+        filter.source = rawSource as IGroup['source'];
       }
-      if (search && search.length > MAX_SEARCH_LENGTH) {
+      if (rawSearch != null && typeof rawSearch !== 'string') {
+        return res.status(400).json({ error: 'search must be a string' });
+      }
+      if (typeof rawSearch === 'string' && rawSearch.length > MAX_SEARCH_LENGTH) {
         return res
           .status(400)
           .json({ error: `search must not exceed ${MAX_SEARCH_LENGTH} characters` });
       }
-      if (search) {
-        filter.search = search;
+      if (typeof rawSearch === 'string' && rawSearch.length > 0) {
+        filter.search = rawSearch;
       }
       const { limit, offset } = parsePagination(req.query);
       const [groups, total] = await Promise.all([
