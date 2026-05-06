@@ -3,6 +3,7 @@ const express = require('express');
 const request = require('supertest');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
+const csurf = require('csurf');
 const { getBasePath } = require('@librechat/api');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
@@ -155,6 +156,11 @@ describe('MCP Routes', () => {
     app = express();
     app.use(express.json());
     app.use(cookieParser());
+    app.use(csurf({ cookie: true }));
+    app.use((req, res, next) => {
+      res.set('x-csrf-token', req.csrfToken());
+      next();
+    });
 
     app.use((req, res, next) => {
       req.user = { id: 'test-user-id' };
@@ -162,6 +168,12 @@ describe('MCP Routes', () => {
     });
 
     app.use('/api/mcp', mcpRouter);
+    app.use((err, req, res, next) => {
+      if (err && err.code === 'EBADCSRFTOKEN') {
+        return res.status(403).json({ message: 'Invalid CSRF token' });
+      }
+      return next(err);
+    });
   });
 
   afterAll(async () => {
