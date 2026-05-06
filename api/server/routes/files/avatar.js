@@ -29,8 +29,10 @@ router.post('/', avatarUploadLimiter, async (req, res) => {
       throw new Error('Uploaded file path is invalid');
     }
 
-    const uploadRootDir = path.resolve(path.dirname(req.file.path));
-    safeUploadPath = path.resolve(req.file.path);
+    const configuredUploadRoot =
+      appConfig?.paths?.upload?.temp || appConfig?.paths?.uploads || path.dirname(req.file.path);
+    const uploadRootDir = await fs.realpath(path.resolve(configuredUploadRoot));
+    safeUploadPath = await fs.realpath(path.resolve(req.file.path));
     if (
       safeUploadPath !== uploadRootDir &&
       !safeUploadPath.startsWith(uploadRootDir + path.sep)
