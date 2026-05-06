@@ -127,7 +127,8 @@ export async function fetchModels({
   }
 
   const shouldCache = !skipCache && !(userIdQuery && user);
-  const cacheKey = shouldCache ? modelsCacheKey(baseURL ?? '', apiKey) : '';
+  const apiKeyCacheClass = isUserProvided(apiKey) ? 'user-provided' : 'configured';
+  const cacheKey = shouldCache ? modelsCacheKey(baseURL ?? '', apiKeyCacheClass) : '';
   const modelsCache = shouldCache ? standardCache(CacheKeys.MODEL_QUERIES) : null;
   if (modelsCache && cacheKey) {
     const cachedModels = await modelsCache.get(cacheKey);
