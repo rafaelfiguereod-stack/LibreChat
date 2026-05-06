@@ -1,4 +1,5 @@
 const { Router } = require('express');
+const rateLimit = require('express-rate-limit');
 const { logger, getTenantId, tenantStorage } = require('@librechat/data-schemas');
 const {
   CacheKeys,
@@ -50,6 +51,13 @@ const db = require('~/models');
 
 const router = Router();
 
+const oauthInitiateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const OAUTH_CSRF_COOKIE_PATH = '/api/mcp';
 
 const checkMCPUsePermissions = generateCheckAccess({
@@ -76,7 +84,7 @@ router.get('/tools', requireJwtAuth, async (req, res) => {
  * Initiate OAuth flow
  * This endpoint is called when the user clicks the auth link in the UI
  */
-router.get('/:serverName/oauth/initiate', requireJwtAuth, setOAuthSession, async (req, res) => {
+router.get('/:serverName/oauth/initiate', oauthInitiateLimiter, requireJwtAuth, setOAuthSession, async (req, res) => {
   try {
     const { serverName } = req.params;
     const { userId, flowId } = req.query;
