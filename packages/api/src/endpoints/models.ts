@@ -211,7 +211,12 @@ export async function fetchModels({
 }
 
 function modelsCacheKey(baseURL: string, apiKey: string): string {
-  return crypto.createHash('sha256').update(`${baseURL}:${apiKey}`).digest('hex').slice(0, 32);
+  const cacheKeySecret = process.env.CREDS_KEY || 'librechat-model-cache-key';
+  return crypto
+    .createHmac('sha256', cacheKeySecret)
+    .update(`${baseURL}:${apiKey}`)
+    .digest('hex')
+    .slice(0, 32);
 }
 
 /** Options for fetching OpenAI models */
