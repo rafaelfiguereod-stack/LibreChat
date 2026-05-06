@@ -125,7 +125,10 @@ export async function createOAuthMCPServer(
     string,
     { codeChallenge?: string; codeChallengeMethod?: string; clientId?: string }
   >();
-  const registeredClients = new Map<string, { client_id: string; client_secret: string }>();
+  const registeredClients = new Map<
+    string,
+    { client_id: string; client_secret: string; redirect_uris: string[] }
+  >();
 
   let port = 0;
 
@@ -156,13 +159,18 @@ export async function createOAuthMCPServer(
       const data = JSON.parse(body) as { redirect_uris?: string[] };
       const clientId = `client-${randomUUID().slice(0, 8)}`;
       const clientSecret = `secret-${randomUUID()}`;
-      registeredClients.set(clientId, { client_id: clientId, client_secret: clientSecret });
+      const redirectUris = data.redirect_uris ?? [];
+      registeredClients.set(clientId, {
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uris: redirectUris,
+      });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(
         JSON.stringify({
           client_id: clientId,
           client_secret: clientSecret,
-          redirect_uris: data.redirect_uris ?? [],
+          redirect_uris: redirectUris,
         }),
       );
       return;
@@ -173,11 +181,29 @@ export async function createOAuthMCPServer(
       const codeChallenge = url.searchParams.get('code_challenge') ?? undefined;
       const codeChallengeMethod = url.searchParams.get('code_challenge_method') ?? undefined;
       const clientId = url.searchParams.get('client_id') ?? undefined;
-      authCodes.set(code, { codeChallenge, codeChallengeMethod, clientId });
       const redirectUri = url.searchParams.get('redirect_uri') ?? '';
       const state = url.searchParams.get('state') ?? '';
+      const client = clientId ? registeredClients.get(clientId) : undefined;
+      const isAllowedRedirect =
+        !!client && !!redirectUri && client.redirect_uris.includes(redirectUri);
+
+      if (!isAllowedRedirect) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            error: 'invalid_request',
+            error_description: 'Invalid or unregistered redirect_uri for client_id',
+          }),
+        );
+        return;
+      }
+
+      authCodes.set(code, { codeChallenge, codeChallengeMethod, clientId });
+      const redirectUrl = new URL(redirectUri);
+      redirectUrl.searchParams.set('code', code);
+      redirectUrl.searchParams.set('state', state);
       res.writeHead(302, {
-        Location: `${redirectUri}?code=${code}&state=${state}`,
+        Location: redirectUrl.toString(),
       });
       res.end();
       return;
