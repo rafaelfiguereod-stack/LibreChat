@@ -1,4 +1,5 @@
 const fs = require('fs').promises;
+const path = require('path');
 const express = require('express');
 const { logger, SystemCapabilities } = require('@librechat/data-schemas');
 const {
@@ -375,6 +376,22 @@ router.get('/:file_id/preview', fileAccess, async (req, res) => {
   }
 });
 
+const UPLOAD_ROOT = path.resolve(process.env.UPLOAD_PATH || process.cwd());
+
+function getSafeUploadPath(filePath) {
+  if (typeof filePath !== 'string' || filePath.length === 0) {
+    throw new Error('Invalid file path');
+  }
+
+  const resolvedPath = path.resolve(filePath);
+  const relative = path.relative(UPLOAD_ROOT, resolvedPath);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error('Unsafe file path');
+  }
+
+  return resolvedPath;
+}
+
 router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
   try {
     const { userId, file_id } = req.params;
@@ -482,7 +499,8 @@ router.post('/', async (req, res) => {
     logger.error('[/files] Error processing file:', error);
 
     try {
-      await fs.unlink(req.file.path);
+      const safePath = getSafeUploadPath(req.file?.path);
+      await fs.unlink(safePath);
       cleanup = false;
     } catch (error) {
       logger.error('[/files] Error deleting file:', error);
@@ -491,7 +509,8 @@ router.post('/', async (req, res) => {
   } finally {
     if (cleanup) {
       try {
-        await fs.unlink(req.file.path);
+        const safePath = getSafeUploadPath(req.file?.path);
+        await fs.unlink(safePath);
       } catch (error) {
         logger.error('[/files] Error deleting file after file processing:', error);
       }
