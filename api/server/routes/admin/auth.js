@@ -1,6 +1,7 @@
 const express = require('express');
 const passport = require('passport');
 const crypto = require('node:crypto');
+const rateLimit = require('express-rate-limit');
 const { CacheKeys } = require('librechat-data-provider');
 const { logger, SystemCapabilities } = require('@librechat/data-schemas');
 const {
@@ -321,11 +322,18 @@ router.get(
   createOAuthHandler(`${getAdminPanelUrl()}/auth/discord/callback`),
 );
 
+const adminOAuthRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 /* ──────────────────────────────────────────────
  * Facebook Admin Routes
  * ────────────────────────────────────────────── */
 
-router.get('/oauth/facebook', async (req, res, next) => {
+router.get('/oauth/facebook', adminOAuthRateLimiter, async (req, res, next) => {
   const state = generateState();
   const cache = getLogStores(CacheKeys.ADMIN_OAUTH_EXCHANGE);
   const stored = await storeAndStripChallenge(cache, req, state, 'facebook');
@@ -344,6 +352,7 @@ router.get('/oauth/facebook', async (req, res, next) => {
 
 router.get(
   '/oauth/facebook/callback',
+  adminOAuthRateLimiter,
   (req, res, next) => {
     req.oauthState = typeof req.query.state === 'string' ? req.query.state : undefined;
     next();
@@ -365,7 +374,7 @@ router.get(
  * Apple Admin Routes (POST callback)
  * ────────────────────────────────────────────── */
 
-router.get('/oauth/apple', async (req, res, next) => {
+router.get('/oauth/apple', adminOAuthRateLimiter, async (req, res, next) => {
   const state = generateState();
   const cache = getLogStores(CacheKeys.ADMIN_OAUTH_EXCHANGE);
   const stored = await storeAndStripChallenge(cache, req, state, 'apple');
@@ -383,6 +392,7 @@ router.get('/oauth/apple', async (req, res, next) => {
 
 router.post(
   '/oauth/apple/callback',
+  adminOAuthRateLimiter,
   (req, res, next) => {
     req.oauthState = typeof req.body.state === 'string' ? req.body.state : undefined;
     next();
