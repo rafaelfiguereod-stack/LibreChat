@@ -9,6 +9,15 @@ export const IMAGE_MAX_H = 'max-h-[45vh]' as const;
 /** Matches the `max-w-lg` Tailwind class on the wrapper button (32rem = 512px at 16px base) */
 const IMAGE_MAX_W_PX = 512;
 
+function sanitizeImagePath(imagePath: string): string {
+  if (!imagePath) return '';
+  if (imagePath.startsWith('blob:')) return imagePath;
+  if (imagePath.startsWith('data:image/')) return imagePath;
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath;
+  if (imagePath.startsWith('/')) return imagePath;
+  return '';
+}
+
 /** Caches image dimensions by src so remounts can reserve space */
 const dimensionCache = new Map<string, { width: number; height: number }>();
 /** Tracks URLs that have been fully painted — skip skeleton on remount */
@@ -49,18 +58,21 @@ const Image = ({
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const absoluteImageUrl = useMemo(() => {
-    if (!imagePath) return imagePath;
+    const safeImagePath = sanitizeImagePath(imagePath);
+    if (!safeImagePath) return '';
 
     if (
-      imagePath.startsWith('http') ||
-      imagePath.startsWith('data:') ||
-      !imagePath.startsWith('/images/')
+      safeImagePath.startsWith('blob:') ||
+      safeImagePath.startsWith('http://') ||
+      safeImagePath.startsWith('https://') ||
+      safeImagePath.startsWith('data:image/') ||
+      !safeImagePath.startsWith('/images/')
     ) {
-      return imagePath;
+      return safeImagePath;
     }
 
     const baseURL = apiBaseUrl();
-    return `${baseURL}${imagePath}`;
+    return `${baseURL}${safeImagePath}`;
   }, [imagePath]);
 
   const downloadImage = async () => {
