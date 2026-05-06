@@ -32,7 +32,9 @@ router.post('/', avatarUploadLimiter, async (req, res) => {
     const configuredUploadRoot =
       appConfig?.paths?.upload?.temp || appConfig?.paths?.uploads || path.dirname(req.file.path);
     const uploadRootDir = await fs.realpath(path.resolve(configuredUploadRoot));
-    safeUploadPath = await fs.realpath(path.resolve(req.file.path));
+    const uploadedFileName = path.basename(req.file.path);
+    const uploadCandidatePath = path.resolve(uploadRootDir, uploadedFileName);
+    safeUploadPath = await fs.realpath(uploadCandidatePath);
     if (
       safeUploadPath !== uploadRootDir &&
       !safeUploadPath.startsWith(uploadRootDir + path.sep)
