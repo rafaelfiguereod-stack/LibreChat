@@ -17,6 +17,7 @@
  *   }
  */
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const {
   OpenAIChatCompletionController,
   ListModelsController,
@@ -31,8 +32,15 @@ const {
 } = require('./middleware');
 
 const router = express.Router();
+const openAIRouteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 router.use(preAuthTenantMiddleware);
+router.use(openAIRouteLimiter);
 router.use(requireRemoteAgentAuth);
 router.use(configMiddleware);
 router.use(checkRemoteAgentsFeature);
